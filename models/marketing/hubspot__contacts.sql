@@ -5,10 +5,12 @@
 with contacts as (
 
     select *
-    from {% if var('hubspot_contact_merge_audit_enabled', false) %} 
-            {{ ref('int_hubspot__contact_merge_adjust') }} 
-        {% else %} 
-            {{ var('contact') }} 
+    from {% if var('hubspot_contact_merge_audit_enabled', false) %}
+            {{ ref('int_hubspot__contact_merge_adjust') }}
+        {% else %}
+            {{ var('contact') }}
+            where property_hs_calculated_merged_vids is not null
+                or id::character varying=property_hs_all_contact_vids
         {% endif %}
 
 {% if emails_enabled %}
@@ -20,7 +22,7 @@ with contacts as (
 
 ), email_metrics as (
 
-    select 
+    select
         recipient_email_address,
         {% for metric in var('email_metrics') %}
         sum({{ metric }}) as total_{{ metric }},
@@ -32,7 +34,7 @@ with contacts as (
 
 ), email_joined as (
 
-    select 
+    select
         contacts.*,
         {% for metric in var('email_metrics') %}
         coalesce(email_metrics.total_{{ metric }}, 0) as total_{{ metric }},
@@ -56,7 +58,7 @@ with contacts as (
 
 ), engagements_joined as (
 
-    select 
+    select
         {{ cte_ref }}.*,
         {% for metric in engagement_metrics() %}
         coalesce(engagements.{{ metric }},0) as {{ metric }} {% if not loop.last %},{% endif %}
